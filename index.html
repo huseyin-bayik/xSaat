@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Saat Hesaplayıcı</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Saat Hesapla">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f3f5f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f131b" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="apple-touch-icon.png">
+<style>html{-webkit-text-size-adjust:100%}body{margin:0}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: tek sütun, telefon öncelikli; üstte canlı saat, ortada giriş, altta sonuç */
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --fg:#141a26; --muted:#5d6678; --line:#dde2ec;
+  --accent:#2453c9; --accent-soft:#e6ecfb; --on-accent:#ffffff;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f131b; --surface:#171c27; --fg:#e8ecf4; --muted:#949db0; --line:#2a3141;
+  --accent:#7ea2ff; --accent-soft:#1f2a45; --on-accent:#0f131b; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0f131b; --surface:#171c27; --fg:#e8ecf4; --muted:#949db0; --line:#2a3141;
+  --accent:#7ea2ff; --accent-soft:#1f2a45; --on-accent:#0f131b; color-scheme:dark;}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-size:1.05rem;font-weight:600;margin:0;letter-spacing:.01em}
+.theme{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
+.theme button{font:inherit;font-size:.82rem;border:0;background:transparent;color:var(--muted);padding:6px 12px;border-radius:999px;cursor:pointer}
+.theme button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.time{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.now .time{font-size:3.2rem;margin-top:6px}
+.date{color:var(--muted);margin-top:8px}
+.now{padding:4px 2px 8px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:16px}
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field input{font-family:var(--mono);font-size:1.6rem;font-weight:600;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font-variant-numeric:tabular-nums}
+.field input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.presets button{font-family:var(--mono);font-size:.95rem;font-weight:500;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:8px 14px;border-radius:999px;cursor:pointer}
+.presets button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.dir{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px}
+.dir button{font:inherit;font-weight:500;border:0;background:transparent;color:var(--muted);padding:9px;border-radius:8px;cursor:pointer}
+.dir button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.result{background:var(--accent-soft);border:1px solid var(--accent);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:6px}
+.result .label{color:var(--accent)}
+.result .time{font-size:2.8rem;margin-top:4px}
+.result .date{color:var(--fg);margin-top:4px;font-weight:500}
+.rel{color:var(--muted);font-size:.92rem}
+.copy{align-self:flex-start;margin-top:8px;font:inherit;font-size:.88rem;font-weight:500;border:1px solid var(--accent);background:transparent;color:var(--accent);padding:7px 14px;border-radius:8px;cursor:pointer}
+.foot{color:var(--muted);font-size:.8rem;text-align:center}
+@media (max-width:360px){.now .time{font-size:2.6rem}.result .time{font-size:2.3rem}}
+body{padding-top:calc(env(safe-area-inset-top,0px) + 20px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 40px)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Saat Hesaplayıcı</h1>
+    <div class="theme" role="group" aria-label="Tema">
+      <button id="t-light" type="button" aria-pressed="false">Açık</button>
+      <button id="t-dark" type="button" aria-pressed="false">Koyu</button>
+    </div>
+  </header>
+
+  <section class="now" aria-live="polite">
+    <div class="label">Şu an · Türkiye saati</div>
+    <div class="time" id="nowTime">--:--</div>
+    <div class="date" id="nowDate"></div>
+  </section>
+
+  <section class="panel">
+    <div class="inputs">
+      <label class="field"><span class="label">Saat</span>
+        <input id="h" type="number" inputmode="numeric" min="0" max="99999" value="8"></label>
+      <label class="field"><span class="label">Dakika</span>
+        <input id="m" type="number" inputmode="numeric" min="0" max="59999" value="0"></label>
+    </div>
+    <div class="presets" id="presets">
+      <button type="button" data-h="1">+1</button>
+      <button type="button" data-h="8">+8</button>
+      <button type="button" data-h="12">+12</button>
+      <button type="button" data-h="24">+24</button>
+      <button type="button" data-h="48">+48</button>
+    </div>
+    <div class="dir" role="group" aria-label="Yön">
+      <button id="d-after" type="button" aria-pressed="true">Sonra</button>
+      <button id="d-before" type="button" aria-pressed="false">Önce</button>
+    </div>
+  </section>
+
+  <section class="result" aria-live="polite">
+    <div class="label" id="resLabel">8 saat sonra</div>
+    <div class="time" id="resTime">--:--</div>
+    <div class="date" id="resDate"></div>
+    <div class="rel" id="resRel"></div>
+    <button class="copy" id="copy" type="button">Sonucu kopyala</button>
+  </section>
+
+  <div class="foot">Saat dilimi: İstanbul (UTC+3)</div>
+</div>
+
+<script>
+const TZ="Europe/Istanbul";
+const fTime=new Intl.DateTimeFormat("tr-TR",{timeZone:TZ,hour:"2-digit",minute:"2-digit",hour12:false});
+const fDate=new Intl.DateTimeFormat("tr-TR",{timeZone:TZ,day:"numeric",month:"long",year:"numeric",weekday:"long"});
+const fKey=new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"});
+const $=id=>document.getElementById(id);
+let dir=1;
+
+function dateLine(d){
+  // "Cumartesi 7 Kasım 2026" -> "7 Kasım 2026 Cumartesi"
+  const p=fDate.formatToParts(d), g=t=>(p.find(x=>x.type===t)||{}).value||"";
+  return `${g("day")} ${g("month")} ${g("year")} ${g("weekday")}`;
+}
+function dayDiff(a,b){
+  return Math.round((Date.parse(fKey.format(b))-Date.parse(fKey.format(a)))/86400000);
+}
+function relText(n){
+  if(n===0)return "Bugün"; if(n===1)return "Yarın"; if(n===-1)return "Dün";
+  return n>0?`${n} gün sonra`:`${-n} gün önce`;
+}
+function num(el){const v=parseInt(el.value,10);return isNaN(v)||v<0?0:v;}
+function durText(h,m){
+  const total=h*60+m; if(total===0)return "Şu an";
+  const d=Math.floor(total/1440), hh=Math.floor(total%1440/60), mm=total%60;
+  const parts=[]; if(h>=24&&d)parts.push(`${d} gün`);
+  const showH=h>=24?hh:Math.floor(total/60);
+  if(showH)parts.push(`${showH} saat`); if(mm)parts.push(`${mm} dakika`);
+  return parts.join(" ")+(dir>0?" sonra":" önce");
+}
+
+function render(){
+  const now=new Date();
+  $("nowTime").textContent=fTime.format(now);
+  $("nowDate").textContent=dateLine(now);
+  const h=num($("h")), m=num($("m"));
+  const t=new Date(now.getTime()+dir*(h*3600000+m*60000));
+  $("resLabel").textContent=durText(h,m);
+  $("resTime").textContent=fTime.format(t);
+  $("resDate").textContent=dateLine(t);
+  $("resRel").textContent=relText(dayDiff(now,t));
+  document.querySelectorAll("#presets button").forEach(b=>b.classList.toggle("on",+b.dataset.h===h&&m===0));
+}
+
+$("h").addEventListener("input",render);
+$("m").addEventListener("input",render);
+document.querySelectorAll("#presets button").forEach(b=>b.addEventListener("click",()=>{
+  $("h").value=b.dataset.h; $("m").value=0; render();
+}));
+function setDir(v){dir=v;$("d-after").setAttribute("aria-pressed",v>0);$("d-before").setAttribute("aria-pressed",v<0);render();}
+$("d-after").addEventListener("click",()=>setDir(1));
+$("d-before").addEventListener("click",()=>setDir(-1));
+
+$("copy").addEventListener("click",()=>{
+  const txt=`${$("resLabel").textContent}: ${$("resDate").textContent}, ${$("resTime").textContent}`;
+  const done=()=>{$("copy").textContent="Kopyalandı";setTimeout(()=>$("copy").textContent="Sonucu kopyala",1500);};
+  try{navigator.clipboard.writeText(txt).then(done).catch(()=>fallback(txt,done));}catch(e){fallback(txt,done);}
+});
+function fallback(txt,done){
+  const ta=document.createElement("textarea");ta.value=txt;document.body.appendChild(ta);ta.select();
+  try{document.execCommand("copy");done();}catch(e){}ta.remove();
+}
+
+function applyTheme(t){
+  const root=document.documentElement;
+  if(t)root.setAttribute("data-theme",t);
+  const dark=t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+  $("t-dark").setAttribute("aria-pressed",dark);$("t-light").setAttribute("aria-pressed",!dark);
+}
+function pickTheme(t){applyTheme(t);try{localStorage.setItem("theme",t);}catch(e){}}
+$("t-light").addEventListener("click",()=>pickTheme("light"));
+$("t-dark").addEventListener("click",()=>pickTheme("dark"));
+let saved=null;try{saved=localStorage.getItem("theme");}catch(e){}
+applyTheme(saved);
+
+render();
+setInterval(render,1000);
+</script>
+
+</body>
+</html>
