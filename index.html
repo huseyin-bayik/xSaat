@@ -52,7 +52,9 @@ h1{font-size:1.05rem;font-weight:600;margin:0;letter-spacing:.01em}
 .field input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
 .presets{display:flex;flex-wrap:wrap;gap:8px}
 .presets button{font-family:var(--mono);font-size:.95rem;font-weight:500;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:8px 14px;border-radius:999px;cursor:pointer}
-.presets button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.presets button:active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.presets .reset{font-family:var(--sans);margin-left:auto;color:var(--muted)}
+.result.idle .time,.result.idle .date{opacity:.45}
 .dir{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px}
 .dir button{font:inherit;font-weight:500;border:0;background:transparent;color:var(--muted);padding:9px;border-radius:8px;cursor:pointer}
 .dir button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -88,16 +90,15 @@ body{padding-top:calc(env(safe-area-inset-top,0px) + 20px);padding-bottom:calc(e
   <section class="panel">
     <div class="inputs">
       <label class="field"><span class="label">Saat</span>
-        <input id="h" type="number" inputmode="numeric" min="0" max="99999" value="8"></label>
+        <input id="h" type="number" inputmode="numeric" min="0" max="99999" value="0"></label>
       <label class="field"><span class="label">Dakika</span>
         <input id="m" type="number" inputmode="numeric" min="0" max="59999" value="0"></label>
     </div>
     <div class="presets" id="presets">
       <button type="button" data-h="1">+1</button>
+      <button type="button" data-h="3">+3</button>
       <button type="button" data-h="8">+8</button>
-      <button type="button" data-h="12">+12</button>
-      <button type="button" data-h="24">+24</button>
-      <button type="button" data-h="48">+48</button>
+      <button type="button" class="reset" id="reset">Sıfırla</button>
     </div>
     <div class="dir" role="group" aria-label="Yön">
       <button id="d-after" type="button" aria-pressed="true">Sonra</button>
@@ -106,7 +107,7 @@ body{padding-top:calc(env(safe-area-inset-top,0px) + 20px);padding-bottom:calc(e
   </section>
 
   <section class="result" aria-live="polite">
-    <div class="label" id="resLabel">8 saat sonra</div>
+    <div class="label" id="resLabel">Süre ekle</div>
     <div class="time" id="resTime">--:--</div>
     <div class="date" id="resDate"></div>
     <div class="rel" id="resRel"></div>
@@ -138,7 +139,7 @@ function relText(n){
 }
 function num(el){const v=parseInt(el.value,10);return isNaN(v)||v<0?0:v;}
 function durText(h,m){
-  const total=h*60+m; if(total===0)return "Şu an";
+  const total=h*60+m; if(total===0)return "Süre ekle";
   const d=Math.floor(total/1440), hh=Math.floor(total%1440/60), mm=total%60;
   const parts=[]; if(h>=24&&d)parts.push(`${d} gün`);
   const showH=h>=24?hh:Math.floor(total/60);
@@ -155,15 +156,17 @@ function render(){
   $("resLabel").textContent=durText(h,m);
   $("resTime").textContent=fTime.format(t);
   $("resDate").textContent=dateLine(t);
-  $("resRel").textContent=relText(dayDiff(now,t));
-  document.querySelectorAll("#presets button").forEach(b=>b.classList.toggle("on",+b.dataset.h===h&&m===0));
+  const idle=h===0&&m===0;
+  $("resRel").textContent=idle?"Saat gir ya da +1, +3, +8'e dokun. Her dokunuş üstüne ekler.":relText(dayDiff(now,t));
+  document.querySelector(".result").classList.toggle("idle",idle);
 }
 
 $("h").addEventListener("input",render);
 $("m").addEventListener("input",render);
-document.querySelectorAll("#presets button").forEach(b=>b.addEventListener("click",()=>{
-  $("h").value=b.dataset.h; $("m").value=0; render();
+document.querySelectorAll("#presets button[data-h]").forEach(b=>b.addEventListener("click",()=>{
+  $("h").value=num($("h"))+Number(b.dataset.h); render();
 }));
+$("reset").addEventListener("click",()=>{$("h").value=0;$("m").value=0;render();});
 function setDir(v){dir=v;$("d-after").setAttribute("aria-pressed",v>0);$("d-before").setAttribute("aria-pressed",v<0);render();}
 $("d-after").addEventListener("click",()=>setDir(1));
 $("d-before").addEventListener("click",()=>setDir(-1));
